@@ -1,63 +1,85 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import GroupList from './components/GroupList';
-import FilterForm from './components/FilterForm';
+import React, { useState } from 'react';
+import { AdaptivityProvider, AppRoot, SplitLayout, SplitCol, View, Panel, PanelHeader } from '@vkontakte/vkui';
 import '@vkontakte/vkui/dist/vkui.css';
-import { Filter, Group } from './types';
-import { mockGroups } from './components/mockgroups';
+import CatFacts from './components/CatFacts';
+import AgePredictor from './components/AgePredictor';
+import { getCatFact } from './api/catApi';
+import { predictAge } from './api/ageApi';
 
-const App: React.FC = () => {
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [filters, setFilters] = useState<Filter>({
-    privacy: 'Все',
-    color: 'Любой',
-    friends: false,
-  });
-  const [filteredGroups, setFilteredGroups] = useState<Group[]>([]);
+const App = () => {
+  const [catFact, setCatFact] = useState('');
+  const [predictedAge, setPredictedAge] = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [currentName, setCurrentName] = useState('');
+  const [isNameValid, setIsNameValid] = useState(true); 
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  const [originalGroups, setOriginalGroups] = useState<Group[]>([]);
-
-  useEffect(() => {
-    setGroups(mockGroups);
-    setOriginalGroups(mockGroups);
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [filters, originalGroups]);
-
-  const applyFilters = () => {
-    let updatedGroups = [...originalGroups];
-
-    if (filters.privacy !== 'Все') {
-      updatedGroups = updatedGroups.filter((group) =>
-        filters.privacy === 'Закрытая' ? group.closed : !group.closed
-      );
-    }
-
-    if (filters.color !== 'Любой') {
-      updatedGroups = updatedGroups.filter(
-        (group) => group.avatar_color === filters.color
-      );
-    }
-
-    if (filters.friends) {
-      updatedGroups = updatedGroups.filter((group) => group.friends !== undefined);
-    }
-
-    setFilteredGroups(updatedGroups);
+  const handleCatFact = async () => {
+    const fact = await getCatFact();
+    setCatFact(fact);
   };
 
-  const handleFilterChange = (newFilters: Filter) => {
-    setFilters({ ...filters, ...newFilters });
+  const handleAgePrediction = async (name: string) => {
+    const prediction = await predictAge(name);
+    setPredictedAge(prediction);
+  };
+
+  const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = event.target.value;
+
+    const isValid = /^[a-zA-Z\s]+$/.test(newName);
+    setIsNameValid(isValid);
+
+    setNameInput(newName);
+
+    if (newName.trim() !== currentName) {
+      setCurrentName(newName.trim());
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = setTimeout(() => {
+        if (isValid && newName.trim() !== '') {
+          handleAgePrediction(newName.trim());
+        }
+      }, 3000);
+    }
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (nameInput.trim() === '' || !isNameValid) {
+      return;
+    }
+
+    handleAgePrediction(nameInput.trim());
+    setNameInput('');
+    setCurrentName('');
   };
 
   return (
-    <div className="app">
-      <h1>Список сообществ</h1>
-      <FilterForm filters={filters} onChange={handleFilterChange} />
-      <GroupList groups={filteredGroups.length > 0 ? filteredGroups : groups} />
-    </div>
+    <AdaptivityProvider>
+      <AppRoot>
+        <SplitLayout>
+          <SplitCol>
+            <View activePanel="main">
+              <Panel id="main">
+                <PanelHeader>Cat's Facts and Age Prediction App</PanelHeader>
+                <CatFacts catFact={catFact} getCatFact={handleCatFact} />
+                <AgePredictor
+                  predictedAge={predictedAge}
+                  nameInput={nameInput}
+                  isNameValid={isNameValid}
+                  handleNameChange={handleNameChange}
+                  handleSubmit={handleSubmit}
+                />
+              </Panel>
+            </View>
+          </SplitCol>
+        </SplitLayout>
+      </AppRoot>
+    </AdaptivityProvider>
   );
 };
 

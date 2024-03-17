@@ -1,25 +1,12 @@
-export interface GetGroupsResponse {
-  result: 1 | 0,
-  data?: Group[]
+export interface CatFactsProps {
+  catFact: string;
+  getCatFact: () => Promise<void>; 
 }
 
-export interface Group {
-  "id": number,
-  "name": string,
-  "closed": boolean,
-  "avatar_color"?: string,
-  "members_count": number,
-  "friends"?: User[]
+export interface AgePredictorProps {
+  predictedAge: string;
+  nameInput: string;
+  handleNameChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  isNameValid: boolean;
 }
-
-export interface User {
-  "first_name": string,
-  "last_name": string
-}
-
-export interface Filter {
-  privacy: 'Все' | 'Закрытая' | 'Открытая';
-  color: 'Любой' | string;
-  friends: boolean;
-}
-
